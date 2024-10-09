@@ -224,7 +224,7 @@ function set_secret() {
 # Stores secret to the path VAULT_SECRET_PATH/<secret> with a key secret
 
     if [ $# -ne 1 ]; then 
-        echo "Usage: ${FUNCNAME[0]} <secret>" >&2
+        echo "Usage: ${FUNCNAME[0]} <secretname>" >&2
         return 1
     fi
 
