@@ -1,6 +1,6 @@
 # Installation
 
-During the installation we will modify the default configuration and enable the KV2 secrets engine. We reduce the security to allow for easier usage of this tool.
+During the installation we will slightly modify the default initialization and create our own TLS keys. We reduce the vault encryption protection to a single shard/key, which is a bit less secure than the default 5/3 configuration. This is done to reduce the complexity of the setup and make it easier for personal use.
 
 ## Install binaries
 
