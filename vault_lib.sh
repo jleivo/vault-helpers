@@ -93,10 +93,15 @@ function vault_add_user() {
             policies="${choice}"
         break
     done
+
+    # Create secrets path
+    vault secrets enable -path "secrets/${USERNAME}"  kv-v2
+
 }
 
 function vault_delete_user(){
-# Deletes provided user. Accepts -f as option to not question deletion
+# Deletes provided user, all its secrets and its policy. Accepts -f as option 
+# to not question deletion
 
     local FORCE=false
     local USER=''
@@ -131,6 +136,7 @@ function vault_delete_user(){
         
     else
         # shellcheck disable=SC2145
+        echo "This will also delete policies and secrets of user ${USER}."
         read -rp "Are you sure you want to delete ${USER}? (y/n): " ANSWER
         if [[ "$ANSWER" == "y" || "$ANSWER" == "Y" ]]; then
             vault delete "auth/userpass/users/$USER"
@@ -139,6 +145,9 @@ function vault_delete_user(){
             return 0
         fi
     fi
+    # Clean up after the user account, remove policies & secrets
+    vault_delete_user_policy "${USER}"
+    vault secrets disable "secrets/${USER}";
 }
 
 function vault_token_login() {
@@ -303,4 +312,41 @@ function trim() { # Internal
     # remove trailing whitespace characters
     var="${var%"${var##*[![:space:]]}"}"
     printf '%s' "$var"
+}
+
+function vault_add_user_policy() {
+# Adds new policy for a user, which has create, read, list, update and delete
+# rights to secrets/USERNAME/* path. Accepts username as argument.
+
+    read -r -d '' POLICY_TEMPLATE <<- EOF
+path "secrets/USERNAME/*" { 
+  capabilities = ["create", "read", "update", "delete", "list"] 
+}
+EOF
+
+    if [ $# -ne 1 ]; then 
+        echo "Usage: ${FUNCNAME[0]} <username>"  >&2
+        return 1
+    fi
+
+    TMP_POLICY=$(mktemp)
+    echo "${POLICY_TEMPLATE//USERNAME/$1}" > "$TMP_POLICY"
+    echo "Will write policy $(cat "$TMP_POLICY") to vault."
+
+    vault policy write "$1" "$TMP_POLICY" || {
+        echo "Failed to create the policy for user $1. Login as root \
+(vault_token_login)?" >&2; rm "$TMP_POLICY"; return 1; }
+    rm "$TMP_POLICY"
+}
+
+function vault_delete_user_policy() {
+# Deletes user policy from Vault. Accepts username as argument
+
+    if [ $# -ne 1 ]; then 
+        echo "Usage: ${FUNCNAME[0]} <username>"   >&2
+        return 1
+    fi
+
+    vault policy delete "$1" || { echo "Failed to delete the policy for user $1. \
+Login as root (vault_token_login)?" >&2; return 1; }
 }
