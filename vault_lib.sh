@@ -350,3 +350,37 @@ function vault_delete_user_policy() {
     vault policy delete "$1" || { echo "Failed to delete the policy for user $1. \
 Login as root (vault_token_login)?" >&2; return 1; }
 }
+
+function get_help() {
+# Lists my custom functions and their help descriptions. Ignores internal
+# functions. Help is the two lines after the function name.
+  local CHOISES=()
+  function_directories=("${HOME}/.local/lib/juha" "${HOME}/.local/lib/work")
+
+  for directory in "${function_directories[@]}"; do
+    if [ -d "$directory" ]; then
+      for item in "$directory"/*.sh; do
+        CHOISES+=("${item##*/}")
+      done
+    fi
+  done
+
+  CHOISES+=("all")
+  echo "Choose:"
+  select choice in "${CHOISES[@]}"
+  do
+    if [ "$choice" == 'all' ] ; then choice='*'; fi
+    for directory in "${function_directories[@]}"; do
+      if [ -d "$directory" ]; then
+      # shellcheck disable=SC2086
+        if [ -f "$directory/"$choice ]; then
+          grep -vi '# internal' "$directory/"$choice | \
+          grep -A 2 -h '^function' | \
+          sed 's/#/  /g; s/^function //g; s/() {//g'
+        fi
+      fi
+    done
+    break
+  done
+
+}

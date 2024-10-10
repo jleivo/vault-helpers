@@ -107,3 +107,14 @@ Here again we take a shortcut. All users will have a default policy which gives 
 - update
 - delete
 
+First create the user policy
+```bash
+vault_create_user_policy <username>
+```
+Then create the user.
+```bash
+vault_create_user <username>
+```
+script will ask for a password, which is used to login to vault and which policy should be attached to this user.
+
+Installation is now complete.
