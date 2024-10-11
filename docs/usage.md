@@ -51,3 +51,11 @@ This is a wrapper to vault list command. It lists all secrets in the personal pa
 $ list_secrets
 openai-api-key
 ```
+
+## Get help
+
+This lists all the command and their very small documentation
+
+```bash
+get_help
+```

@@ -26,11 +26,14 @@ openssl req -x509 -nodes -newkey rsa:2048 -keyout tls.key -out vault.crt -days 3
 After this step you should have a `vault.crt` and `tls.key` file in the current directory. These should be moved to the vault tls directory, which is `/opt/vault/tls/` by default.
 
 ```bash
-sudo mv tls.key /opt/vault/tls/ 
+sudo mv tls.key /opt/vault/tls/ && sudo chown vault:vault /opt/vault/tls/tls.key
 sudo cp vault.crt /opt/vault/tls/tls.crt
 ```
 
 After this step you need to, in the case of self-signed certificate, make the certificate trusted by your system. This can be done by copying the `vault.crt` file to `/usr/local/share/ca-certificates/` and running `sudo update-ca-certificates`.
+```bash
+sudo cp vault.crt /usr/local/share/ca-certificates/ && sudo update-ca-certificates
+```
 
 Finally, restart vault to load the new certificates.
 
@@ -109,12 +112,31 @@ Here again we take a shortcut. All users will have a default policy which gives 
 
 First create the user policy
 ```bash
-vault_create_user_policy <username>
+vault_add_user_policy <username>
 ```
 Then create the user.
 ```bash
-vault_create_user <username>
+vault_add_user <username>
 ```
 script will ask for a password, which is used to login to vault and which policy should be attached to this user.
 
 Installation is now complete.
+
+## Configuring autounseal
+
+Vault can be configured to automatically unseal itself using the following code repository
+
+https://github.com/quickvm/vault-unseal
+
+This will break our "No clear text secrets in clear text files" rule, but this might be acceptable exception as you still need to authenticate against the vault.
+
+As the vault-unseal repository states:
+
+Why was this made?
+
+Running a local Vault on your Linux workstation can help be useful for side projects, homelabs, and for development work flows. Yes, development mode exists but this gives you a much more persistent Vault experience.
+
+# Outcome
+
+If you followed the instructions you now have a relatively easy to use vault installation that might require vault operator unseal after every boot for vault unsealing.
+See [usage](usage.md) for normal day-to-day usage

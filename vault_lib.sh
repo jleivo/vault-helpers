@@ -3,7 +3,7 @@ function check_auth_status() { # Internal
 # Validate authentication status. Checks environmental variables and does a 
 # test login.
 
-    if [ -z "${VAULT_TOKEN}" ] && [ -z "${VAULT_SECRET_PATH}" ]; then
+    if [[ -z "$VAULT_TOKEN" || -z "$VAULT_SECRET_PATH" ]]; then
         echo "You don't seem to be logged onto Vault." >&2
         return 1
     else
@@ -24,7 +24,7 @@ function check_binary() { # Internal
     # shellcheck disable=SC2068 
     for binary in ${@}; do
         if ! hash "${binary}" 2>/dev/null; then 
-            echo "Missing ${binary}"
+            echo "Missing ${binary}" >&2
             final_result=1
         fi
     done
@@ -38,9 +38,9 @@ function bcrypt() {
 # Create bcrypt hash using python3 and bcrypt package
 # Usage: bcrypt
 
-    if ! check_binary python3; then return 1; fi
+    if ! check_binary python3 pip; then return 1; fi
     if ! pip list | grep bcrypt > /dev/null; then 
-        echo "Missing bcrypt package. pip install bcrypt?"
+        echo "Missing bcrypt package. pip install bcrypt?" >&2
         return 1;
     fi
 
@@ -74,7 +74,10 @@ function vault_add_user() {
         USERNAME="$1"
     fi
 
-    bcrypted_password=$(bcrypt)
+    if ! bcrypted_password=$(bcrypt); then
+        echo "Password creation failed." >&2
+        return 1;
+    fi
 
     if ! vault policy list > /dev/null 2>&1 ; then 
         echo "Missing rights to list policies. Log in with higher rights?"
