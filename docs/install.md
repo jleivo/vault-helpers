@@ -17,10 +17,10 @@ The self-signed certificate created here has multiple SAN's to allow for multipl
 
 should you need to add other SAN'S you can do so by modifying the last line of this command. Use the DNS and IP examples as a reference.
 
-Certificate validity is set to 365 days, but you might want to have a longer validity period for your own use case. Adjust the validity period by changing the -days parameter.
+Certificate validity is set to 3650 days, but you might want to have a shorter validity period for your own use case. Adjust the validity period by changing the -days parameter.
 
 ```bash
-openssl req -x509 -nodes -newkey rsa:2048 -keyout tls.key -out vault.crt -days 365 -subj "/CN=localhost" -reqexts SAN -extensions SAN -config <(echo -e "[ req ]\ndistinguished_name=req_distinguished_name\n[ req_distinguished_name ]\n[ SAN ]\nsubjectAltName=DNS:localhost,IP:127.0.0.1")
+openssl req -x509 -nodes -newkey rsa:2048 -keyout tls.key -out vault.crt -days 3650 -subj "/CN=localhost" -reqexts SAN -extensions SAN -config <(echo -e "[ req ]\ndistinguished_name=req_distinguished_name\n[ req_distinguished_name ]\n[ SAN ]\nsubjectAltName=DNS:localhost,IP:127.0.0.1")
 ```
 
 After this step you should have a `vault.crt` and `tls.key` file in the current directory. These should be moved to the vault tls directory, which is `/opt/vault/tls/` by default.
