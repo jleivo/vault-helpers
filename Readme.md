@@ -15,8 +15,10 @@ which leaves the token in your bash history + requires you to copy-paste the tok
 curl –H 'token: $(get_secret companyapi)' https://company.service.com
 ```
 
-
 ## Installation
+
+After finishing the installation you will have a vault protected by single unseal key,
+root user with a token and a normal user with a password.
 
 Installation guide can be found in [install.md](./docs/install.md)
 

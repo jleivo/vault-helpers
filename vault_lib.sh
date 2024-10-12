@@ -3,7 +3,7 @@ function check_auth_status() { # Internal
 # Validate authentication status. Checks environmental variables and does a 
 # test login.
 
-    if [[ -z "$VAULT_TOKEN" || -z "$VAULT_SECRET_PATH" ]]; then
+    if [ -z "${VAULT_TOKEN}" ] && [ -z "${VAULT_SECRET_PATH}" ]; then
         echo "You don't seem to be logged onto Vault." >&2
         return 1
     else
@@ -24,7 +24,7 @@ function check_binary() { # Internal
     # shellcheck disable=SC2068 
     for binary in ${@}; do
         if ! hash "${binary}" 2>/dev/null; then 
-            echo "Missing ${binary}" >&2
+            echo "Missing ${binary}"
             final_result=1
         fi
     done
@@ -38,9 +38,9 @@ function bcrypt() {
 # Create bcrypt hash using python3 and bcrypt package
 # Usage: bcrypt
 
-    if ! check_binary python3 pip; then return 1; fi
+    if ! check_binary python3; then return 1; fi
     if ! pip list | grep bcrypt > /dev/null; then 
-        echo "Missing bcrypt package. pip install bcrypt?" >&2
+        echo "Missing bcrypt package. pip install bcrypt?"
         return 1;
     fi
 
@@ -74,10 +74,7 @@ function vault_add_user() {
         USERNAME="$1"
     fi
 
-    if ! bcrypted_password=$(bcrypt); then
-        echo "Password creation failed." >&2
-        return 1;
-    fi
+    bcrypted_password=$(bcrypt)
 
     if ! vault policy list > /dev/null 2>&1 ; then 
         echo "Missing rights to list policies. Log in with higher rights?"
@@ -96,15 +93,10 @@ function vault_add_user() {
             policies="${choice}"
         break
     done
-
-    # Create secrets path
-    vault secrets enable -path "secrets/${USERNAME}"  kv-v2
-
 }
 
 function vault_delete_user(){
-# Deletes provided user, all its secrets and its policy. Accepts -f as option 
-# to not question deletion
+# Deletes provided user. Accepts -f as option to not question deletion
 
     local FORCE=false
     local USER=''
@@ -139,7 +131,6 @@ function vault_delete_user(){
         
     else
         # shellcheck disable=SC2145
-        echo "This will also delete policies and secrets of user ${USER}."
         read -rp "Are you sure you want to delete ${USER}? (y/n): " ANSWER
         if [[ "$ANSWER" == "y" || "$ANSWER" == "Y" ]]; then
             vault delete "auth/userpass/users/$USER"
@@ -148,9 +139,6 @@ function vault_delete_user(){
             return 0
         fi
     fi
-    # Clean up after the user account, remove policies & secrets
-    vault_delete_user_policy "${USER}"
-    vault secrets disable "secrets/${USER}";
 }
 
 function vault_token_login() {
@@ -186,20 +174,10 @@ function vault_login() {
     else
         read -rp "Enter username: " USERNAME
     fi
-    read -rsp "Enter password: " PASSWORD
-
-    # Check if password is empty
-    if [ -z "${PASSWORD}" ]; then 
-        echo "Password cannot be empty." >&2
-        return 1
-    fi
 
     if ! VAULT_TOKEN=$(vault login -method=userpass -token-only\
-        username="${USERNAME}" \
-        password="${PASSWORD}");
-    then 
-        PASSWORD=''
-        return 1; 
+        username="${USERNAME}"); then
+        return 1
     fi
 
     VAULT_SECRET_PATH="secrets/${USERNAME}";
@@ -236,7 +214,7 @@ function set_secret() {
 # Stores secret to the path VAULT_SECRET_PATH/<secret> with a key secret
 
     if [ $# -ne 1 ]; then 
-        echo "Usage: ${FUNCNAME[0]} <secretname>" >&2
+        echo "Usage: ${FUNCNAME[0]} <secret>" >&2
         return 1
     fi
 
@@ -315,75 +293,4 @@ function trim() { # Internal
     # remove trailing whitespace characters
     var="${var%"${var##*[![:space:]]}"}"
     printf '%s' "$var"
-}
-
-function vault_add_user_policy() {
-# Adds new policy for a user, which has create, read, list, update and delete
-# rights to secrets/USERNAME/* path. Accepts username as argument.
-
-    read -r -d '' POLICY_TEMPLATE <<- EOF
-path "secrets/USERNAME/*" { 
-  capabilities = ["create", "read", "update", "delete", "list"] 
-}
-EOF
-
-    if [ $# -ne 1 ]; then 
-        echo "Usage: ${FUNCNAME[0]} <username>"  >&2
-        return 1
-    fi
-
-    TMP_POLICY=$(mktemp)
-    echo "${POLICY_TEMPLATE//USERNAME/$1}" > "$TMP_POLICY"
-    echo "Will write policy $(cat "$TMP_POLICY") to vault."
-
-    vault policy write "$1" "$TMP_POLICY" || {
-        echo "Failed to create the policy for user $1. Login as root \
-(vault_token_login)?" >&2; rm "$TMP_POLICY"; return 1; }
-    rm "$TMP_POLICY"
-}
-
-function vault_delete_user_policy() {
-# Deletes user policy from Vault. Accepts username as argument
-
-    if [ $# -ne 1 ]; then 
-        echo "Usage: ${FUNCNAME[0]} <username>"   >&2
-        return 1
-    fi
-
-    vault policy delete "$1" || { echo "Failed to delete the policy for user $1. \
-Login as root (vault_token_login)?" >&2; return 1; }
-}
-
-function get_help() {
-# Lists my custom functions and their help descriptions. Ignores internal
-# functions. Help is the two lines after the function name.
-  local CHOISES=()
-  function_directories=("${HOME}/.local/lib/juha" "${HOME}/.local/lib/work")
-
-  for directory in "${function_directories[@]}"; do
-    if [ -d "$directory" ]; then
-      for item in "$directory"/*.sh; do
-        CHOISES+=("${item##*/}")
-      done
-    fi
-  done
-
-  CHOISES+=("all")
-  echo "Choose:"
-  select choice in "${CHOISES[@]}"
-  do
-    if [ "$choice" == 'all' ] ; then choice='*'; fi
-    for directory in "${function_directories[@]}"; do
-      if [ -d "$directory" ]; then
-      # shellcheck disable=SC2086
-        if [ -f "$directory/"$choice ]; then
-          grep -vi '# internal' "$directory/"$choice | \
-          grep -A 2 -h '^function' | \
-          sed 's/#/  /g; s/^function //g; s/() {//g'
-        fi
-      fi
-    done
-    break
-  done
-
 }
