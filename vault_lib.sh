@@ -184,12 +184,10 @@ function vault_login() {
     export VAULT_SECRET_PATH
     export VAULT_TOKEN
         
-    if check_auth_status; then 
-        echo "" # "pretty print thing..."
-    else
+    if ! check_auth_status; then 
         unset VAULT_SECRET_PATH
         unset VAULT_TOKEN
-        echo "Failed to login?" >&2
+        echo -e "\nFailed to login?" >&2
         return 1
     fi
 }
