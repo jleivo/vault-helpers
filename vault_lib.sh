@@ -280,6 +280,22 @@ function delete_secret() {
     fi
 }
 
+function search_secrets() {
+# Searches secrets for given string. Search is case insensitive.
+
+    if [ $# -ne 1 ]; then
+        echo "Usage: search_secrets <string>"
+        return 1
+    fi
+
+    if ! check_auth_status; then vault_login;fi
+
+    if ! list_secrets |grep -i "$1"; then 
+        echo "Nothing found for $1"
+    fi
+
+}
+
 function trim() { # Internal
 # Remove leading and trailing whitespace from string
 
